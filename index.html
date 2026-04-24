@@ -158,10 +158,11 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .tw-inner .twitter-timeline{display:block}
 
 /* Instagram embed */
-.ig-wrap{padding:0;background:#fff;min-height:380px;display:flex;flex-direction:column}
+.ig-wrap{background:#fff;min-height:380px;display:flex;flex-direction:column;width:100%}
 .ig-wrap blockquote.instagram-media{
   flex:1;margin:0 !important;width:100% !important;min-width:unset !important;
-  border-radius:0 !important;border:none !important;
+  max-width:100% !important;border-radius:0 !important;border:none !important;
+  min-height:360px;
 }
 
 /* Fallback */
@@ -199,7 +200,60 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .cf-refresh{background:none;border:none;color:var(--text3);cursor:pointer;font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px;transition:color .15s}
 .cf-refresh:hover{color:var(--accent)}
 
-/* ── ADD MODAL ── */
+/* ── ADD CARD (grid末尾の＋カード) ── */
+.add-card{
+  background:transparent;border:2px dashed var(--border2);border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;cursor:pointer;min-height:460px;
+  transition:border-color .2s, background .2s;
+  animation:fadeUp .35s ease both;
+}
+.add-card:hover{border-color:var(--accent);background:rgba(232,255,71,.03)}
+.add-card-icon{
+  width:52px;height:52px;border-radius:50%;
+  border:2px dashed var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;color:var(--text3);
+  transition:all .2s;
+}
+.add-card:hover .add-card-icon{border-color:var(--accent);color:var(--accent);transform:scale(1.08)}
+.add-card-label{font-size:12px;color:var(--text3);font-family:var(--mono);transition:color .2s}
+.add-card:hover .add-card-label{color:var(--accent)}
+
+/* ── SHARE MODAL ── */
+#share-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#share-overlay.open{display:flex}
+#share-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:480px;max-width:95vw;padding:24px;animation:popIn .2s ease}
+.share-url-box{
+  display:flex;gap:8px;margin:16px 0;
+}
+#share-url-field{
+  flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);
+  padding:10px 12px;border-radius:8px;font-family:var(--mono);font-size:11px;
+  outline:none;cursor:text;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.copy-btn{
+  background:var(--accent);color:#000;border:none;padding:10px 16px;
+  border-radius:8px;font-family:var(--mono);font-size:12px;font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:all .15s;
+}
+.copy-btn:hover{background:#fff}
+.copy-btn.copied{background:var(--accent3);color:#fff}
+.share-info{font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:16px}
+.share-panel-list{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;margin-bottom:16px;max-height:140px;overflow-y:auto;
+}
+.share-panel-list::-webkit-scrollbar{width:3px}
+.share-panel-list::-webkit-scrollbar-thumb{background:var(--border2)}
+.share-panel-item{
+  display:flex;align-items:center;gap:8px;padding:4px 0;
+  font-size:11px;color:var(--text2);font-family:var(--mono);
+  border-bottom:1px solid var(--border);
+}
+.share-panel-item:last-child{border-bottom:none}
+.share-panel-icon{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;color:#fff}
+
 #modal-overlay,#save-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
   z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);
@@ -266,6 +320,7 @@ body{display:flex;flex-direction:column;overflow:hidden}
     </div>
   </div>
   <div class="spacer"></div>
+  <button id="share-btn" class="hbtn" onclick="openShare()" style="background:transparent;border:1px solid var(--border2);color:var(--text2)">🔗 シェア</button>
   <button id="save-btn" class="hbtn" onclick="openSave()">💾 保存</button>
   <button id="add-btn" class="hbtn" onclick="openModal()">＋ 追加</button>
 </div>
@@ -327,6 +382,25 @@ body{display:flex;flex-direction:column;overflow:hidden}
     <div class="save-foot">
       <button class="cancel-btn" onclick="closeSave()">キャンセル</button>
       <button class="confirm-btn" onclick="doSave()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div id="share-overlay" onclick="if(event.target===this)closeShare()">
+  <div id="share-modal">
+    <div class="modal-title">🔗 ボードをシェア</div>
+    <div class="share-info">
+      下のURLを共有すると、同じパネル構成を誰でも開けます。<br>
+      URLにパネルのURLが含まれます（ボード名・保存データは含まれません）。
+    </div>
+    <div id="share-panel-list" class="share-panel-list"></div>
+    <div class="share-url-box">
+      <input id="share-url-field" type="text" readonly onclick="this.select()">
+      <button class="copy-btn" id="copy-btn" onclick="copyShareUrl()">コピー</button>
+    </div>
+    <div class="modal-foot">
+      <button class="cancel-btn" onclick="closeShare()">閉じる</button>
     </div>
   </div>
 </div>
@@ -404,18 +478,14 @@ function buildContent(panel) {
     };
   }
 
-  // Instagram — blockquote embed (official, shows profile card + posts grid)
+  // Instagram — show loading first, then async validate via oEmbed
   if (platform === 'instagram') {
     const igHandle = handle.replace('@','');
     return {
       type: 'instagram',
       igHandle,
-      html: `<div class="ig-wrap">
-        <blockquote class="instagram-media"
-          data-instgrm-permalink="https://www.instagram.com/${igHandle}/"
-          data-instgrm-version="14"
-          style="background:#fff;border:0;margin:0;padding:0;width:100%;min-height:360px;">
-        </blockquote>
+      html: `<div class="ig-wrap" id="ig-${panel.id}">
+        <div class="card-loading"><div class="spinner"></div><span>Instagram 確認中...</span></div>
       </div>`
     };
   }
@@ -481,7 +551,7 @@ function renderPanels() {
   empty.classList.remove('show');
 
   grid.innerHTML = panels.map((p, idx) => {
-    const delay = (idx % 4) * 60; // stagger per column
+    const delay = (idx % 4) * 60;
     return `
     <div class="panel-card" id="card-${p.id}" style="animation-delay:${delay}ms">
       <div class="card-header">
@@ -500,7 +570,11 @@ function renderPanels() {
         <button class="cf-refresh" onclick="refreshCard(${p.id})">↺ 更新</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + `
+    <div class="add-card" onclick="openModal()" title="パネルを追加">
+      <div class="add-card-icon">＋</div>
+      <div class="add-card-label">追加する</div>
+    </div>`;
 
   // Load each card staggered
   panels.forEach((p, i) => {
@@ -524,7 +598,7 @@ function loadCard(panel) {
   }
 
   if (c.type === 'instagram') {
-    loadInstagramScript();
+    loadIgCard(panel, el, c.igHandle);
   }
 
   if (c.type === 'tiktok') {
@@ -603,16 +677,163 @@ function loadTwitterWidget(cb) {
 }
 
 let _igLoaded = false;
+
+// ── Instagram: inject blockquote + watch for embed.js error → swap to fallback ──
+function loadIgCard(panel, contentEl, igHandle) {
+  const wrap = document.getElementById(`ig-${panel.id}`);
+  if (!wrap) return;
+  const igUrl = `https://www.instagram.com/${igHandle}/`;
+  injectIgBlockquote(panel, wrap, igHandle, igUrl, contentEl);
+}
+
+function injectIgBlockquote(panel, wrap, igHandle, igUrl, contentEl) {
+  if (!wrap) return;
+
+  wrap.innerHTML = `
+    <blockquote class="instagram-media"
+      data-instgrm-permalink="${igUrl}"
+      data-instgrm-version="14"
+      style="background:#fff;border:0;border-radius:0;margin:0;padding:0;width:100%;min-height:360px;max-width:100%">
+    </blockquote>`;
+
+  // After embed.js transforms the blockquote into an iframe,
+  // watch the resulting iframe's src or the wrapper text for error signals.
+  // embed.js replaces blockquote with an <iframe> pointing to instagram.com embed URL.
+  // If the account has embedding disabled, the iframe page contains the error message.
+  // We detect this by observing DOM mutations on the wrap element.
+
+  const observer = new MutationObserver((mutations) => {
+    const iframe = wrap.querySelector('iframe');
+    if (!iframe) return;
+
+    // iframe appeared — now monitor it for the error state
+    observer.disconnect();
+
+    // Give the iframe time to load, then check its title or try to read content
+    iframe.addEventListener('load', () => {
+      // Check iframe src: Instagram sets src to /embed/ URLs
+      // For error cases, the iframe loads but shows an error page
+      // We detect by checking if the wrap now contains an error-indicating <a> tag
+      // that instagram's embed.js injects alongside the iframe for blocked accounts
+      setTimeout(() => {
+        // Instagram error: wrap will contain a link like "View this profile on Instagram"
+        // but the iframe body shows the error. Check if the iframe's title signals error.
+        try {
+          const iframeDoc = iframe.contentDocument;
+          if (iframeDoc) {
+            const bodyText = iframeDoc.body?.innerText || '';
+            if (
+              bodyText.includes('リンクに問題') ||
+              bodyText.includes('problem with') ||
+              bodyText.includes('may have been deleted') ||
+              bodyText.includes('削除された') ||
+              bodyText.includes('does not exist')
+            ) {
+              showIgFallback(panel, contentEl, igHandle, igUrl, 'embed_disabled');
+              return;
+            }
+          }
+        } catch(e) {
+          // Cross-origin: iframe loaded successfully (normal Instagram behavior) — OK
+        }
+
+        // Also check: instagram sometimes injects an error div OUTSIDE the iframe
+        const wrapText = wrap.innerText || '';
+        if (
+          wrapText.includes('リンクに問題') ||
+          wrapText.includes('problem with') ||
+          wrapText.includes('削除された') ||
+          wrapText.includes('does not exist')
+        ) {
+          showIgFallback(panel, contentEl, igHandle, igUrl, 'embed_disabled');
+        }
+      }, 1500);
+    });
+
+    // Timeout fallback: if iframe src contains known error patterns
+    setTimeout(() => {
+      if (contentEl.dataset.igDone) return;
+      const wrapText = wrap.innerText || '';
+      if (
+        wrapText.includes('リンクに問題') ||
+        wrapText.includes('problem with') ||
+        wrapText.includes('削除された') ||
+        wrap.querySelector('[href*="instagram.com"]')?.textContent?.includes('problem')
+      ) {
+        showIgFallback(panel, contentEl, igHandle, igUrl, 'embed_disabled');
+      }
+    }, 4000);
+  });
+
+  observer.observe(wrap, { childList: true, subtree: true });
+
+  // Trigger embed.js processing
+  if (window.instgrm && window.instgrm.Embeds) {
+    window.instgrm.Embeds.process();
+  } else {
+    loadInstagramScript();
+  }
+}
+
+// Build styled fallback for Instagram embed-disabled accounts
+function showIgFallback(panel, contentEl, igHandle, igUrl, reason) {
+  if (contentEl.dataset.igDone) return;
+  contentEl.dataset.igDone = '1';
+
+  const reasonMsg = reason === 'embed_disabled'
+    ? `このアカウントはInstagramの<strong>埋め込み設定が無効</strong>になっています。<br><br>アカウント所有者が設定 → プライバシー → 埋め込みを許可<br>をオンにすることで表示できます。`
+    : 'このアカウントのプロフィールが見つかりません。URLを確認してください。';
+
+  const initials = igHandle.slice(0,2).toUpperCase();
+
+  contentEl.innerHTML = `
+    <div class="fallback-inner">
+      <div class="fb-profile">
+        <div class="fb-avatar" style="background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)">
+          ${initials}
+        </div>
+        <div>
+          <div class="fb-pname">@${igHandle}</div>
+          <div class="fb-psub">Instagram</div>
+        </div>
+      </div>
+      <div class="fb-alert">
+        <div class="fb-alert-title">⚠ 埋め込みを表示できません</div>
+        <div class="fb-alert-body">${reasonMsg}</div>
+      </div>
+      <a class="fb-open" href="${igUrl}" target="_blank" rel="noopener">
+        📸 Instagramで開いて確認する →
+      </a>
+    </div>`;
+}
+
 function loadInstagramScript() {
   if (!document.getElementById('ig-embed-js')) {
     const s = document.createElement('script');
     s.id = 'ig-embed-js';
     s.src = 'https://www.instagram.com/embed.js';
     s.async = true;
-    s.onload = () => { _igLoaded=true; if(window.instgrm) window.instgrm.Embeds.process(); };
+    s.onload = () => {
+      _igLoaded = true;
+      if (window.instgrm) window.instgrm.Embeds.process();
+    };
     document.body.appendChild(s);
-  } else if (window.instgrm) {
-    window.instgrm.Embeds.process();
+  } else {
+    // Already loaded — just re-process all pending blockquotes
+    if (window.instgrm && window.instgrm.Embeds) {
+      window.instgrm.Embeds.process();
+    } else {
+      // Script tag exists but instgrm not ready yet — poll briefly
+      let tries = 0;
+      const poll = setInterval(() => {
+        tries++;
+        if (window.instgrm && window.instgrm.Embeds) {
+          clearInterval(poll);
+          window.instgrm.Embeds.process();
+        }
+        if (tries > 20) clearInterval(poll);
+      }, 200);
+    }
   }
 }
 
@@ -721,9 +942,81 @@ function showToast(msg,type='') {
   clearTimeout(t._t); t._t=setTimeout(()=>t.className='',2500);
 }
 
-// ── Init ──
+// ── Share ──
+function openShare() {
+  if (!panels.length) { showToast('パネルを追加してからシェアしてください', 'error'); return; }
+
+  // Build share URL: encode panel URLs into query params
+  const base = location.href.split('?')[0].split('#')[0];
+  const encoded = panels.map(p => encodeURIComponent(p.url)).join(',');
+  const title = boardTitle ? encodeURIComponent(boardTitle) : '';
+  const shareUrl = `${base}?panels=${encoded}${title ? '&title='+title : ''}`;
+
+  document.getElementById('share-url-field').value = shareUrl;
+
+  // Panel list preview
+  const listEl = document.getElementById('share-panel-list');
+  listEl.innerHTML = panels.map(p => {
+    const bg = AV_COL[p.platform] || '#333';
+    return `<div class="share-panel-item">
+      <div class="share-panel-icon" style="background:${bg}">${ICON_LBL[p.platform]||'🌐'}</div>
+      <span>${p.handle}</span>
+      <span style="color:var(--text3);margin-left:auto">${LABELS[p.platform]||'Web'}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('share-overlay').classList.add('open');
+  closeBoardDD();
+}
+
+function closeShare() { document.getElementById('share-overlay').classList.remove('open'); }
+
+function copyShareUrl() {
+  const field = document.getElementById('share-url-field');
+  navigator.clipboard.writeText(field.value).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ コピー済み';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+    showToast('URLをコピーしました', 'success');
+  }).catch(() => {
+    field.select();
+    document.execCommand('copy');
+    showToast('URLをコピーしました', 'success');
+  });
+}
+
+// ── Restore from share URL ──
+function restoreFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const panelParam = params.get('panels');
+  const titleParam = params.get('title');
+  if (!panelParam) return false;
+
+  const urls = panelParam.split(',').map(u => {
+    try { return decodeURIComponent(u); } catch { return null; }
+  }).filter(Boolean);
+
+  if (!urls.length) return false;
+
+  if (titleParam) {
+    boardTitle = decodeURIComponent(titleParam);
+    document.getElementById('board-title-input').value = boardTitle;
+    document.getElementById('board-label').textContent = boardTitle;
+  }
+
+  urls.forEach(url => addPanelData(url));
+  showToast(`${urls.length}件のパネルを復元しました`, 'success');
+  return true;
+}
+
+
 document.addEventListener('click', e => { if(!document.getElementById('board-selector').contains(e.target)) closeBoardDD(); });
-if (boards.length) loadBoard(boards[boards.length-1].id); else renderPanels();
+
+// Priority: URL params (shared link) → last saved board → empty
+if (!restoreFromUrl()) {
+  if (boards.length) loadBoard(boards[boards.length-1].id); else renderPanels();
+}
 </script>
 </body>
 </html>
